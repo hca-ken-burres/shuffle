@@ -1,0 +1,19 @@
+created:
+    - database/factories/RequisitionFactory.php
+    - database/factories/RequisitionItemFactory.php
+    - database/factories/YearFactory.php
+    - database/factories/VendorFactory.php
+    - database/migrations/2024_04_27_144340_create_requisitions_table.php
+    - database/migrations/2024_04_27_144341_create_requisition_items_table.php
+    - database/migrations/2024_04_27_144342_create_years_table.php
+    - database/migrations/2024_04_27_144343_create_vendors_table.php
+    - app/Models/Requisition.php
+    - app/Models/RequisitionItem.php
+    - app/Models/Year.php
+    - app/Models/Vendor.php
+models:
+    User: { name: string, email: string, email_verified_at: 'datetime nullable', password: string, remember_token: 'string nullable' }
+    Requisition: { category: 'enum:books,supplies,equipment,other', reason: 'string:400', submitted_at: 'nullable datetime', admin_id: 'nullable id foreign:users', approved_at: 'nullable datetime', orderer_id: 'nullable id foreign:users', account_num: 'nullable string', ordered_at: 'nullable datetime', received_at: 'nullable datetime', payment_method: 'enum:cash,check,creditcard,po,wire,other', payment_note: 'nullable string:100', relationships: { hasMany: RequisitionItem, belongsTo: 'User,Vendor,Year' } }
+    RequisitionItem: { quantity: 'unsigned integer default:1', description: string, code: string, unit_price: 'decimal:8,2', relationships: { belongsTo: Requisition } }
+    Year: { starts_in: 'unsigned integer', ends_in: 'unsigned integer', relationships: { hasMany: Requisition } }
+    Vendor: { name: string, address: 'nullable string', phone: 'nullable string', city: 'nullable string', state: 'nullable string', zip: 'nullable string', url: 'nullable string', relationships: { hasMany: Requisition } }
