@@ -43,11 +43,14 @@ class DatabaseSeeder extends Seeder
         Year::factory()->create(['starts_in' => 2024, 'ends_in' => 2025]);
         // Year::factory()->create(['starts_in' => 2025, 'ends_in' => 2026]);
 
-        $role = Role::create(['name' => 'manager']);
+        $managerRole = Role::create(['name' => 'manager']);
         $permission = Permission::create(['name' => 'edit requisitions']);
-        $role->givePermissionTo($permission);
+        $managerRole->givePermissionTo($permission);
 
         $manager->assignRole('manager');
+
+        $superAdminRole = Role::create(['name' => 'Super Admin']);
+        $admin->assignRole('Super Admin');
 
         User::factory()->count(3)->create();
 

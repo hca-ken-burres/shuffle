@@ -94,7 +94,7 @@ class RequisitionResource extends Resource
                                 ->label('URL / Link')
                                 ->url()
                                 ->helperText('Paste entire link to item')
-                                ->maxLength(255)
+                                ->maxLength(1000)
                                 ->prefixIcon('heroicon-o-link')
                                 ->columnSpan(5),
                             TextInput::make('quantity')
@@ -132,7 +132,6 @@ class RequisitionResource extends Resource
                             })
 
                 ]),
-
                 Section::make('Payment Details')
                     ->collapsible()
                     ->schema([
@@ -180,10 +179,21 @@ class RequisitionResource extends Resource
                     ->color(fn($state) => $state->getColor()),
             ])
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('owner')
+                    ->relationship('user', 'name')
+                    ->multiple()
+                    ->searchable()
+                    ->preload(),
+
+                Tables\Filters\SelectFilter::make('vendor')
+                    ->relationship('vendor', 'name')
+                    ->multiple()
+                    ->searchable()
+                    ->preload(),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\EditAction::make()
+                    ->slideOver(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -204,7 +214,7 @@ class RequisitionResource extends Resource
         return [
             'index' => Pages\ListRequisitions::route('/'),
             'create' => Pages\CreateRequisition::route('/create'),
-            'edit' => Pages\EditRequisition::route('/{record}/edit'),
+            // 'edit' => Pages\EditRequisition::route('/{record}/edit'),
         ];
     }
 }
