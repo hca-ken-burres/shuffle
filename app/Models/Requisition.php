@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\RequisitionCategory;
 use App\Enums\RequisitionStatus;
+use App\Notifications\Requisition\RequisitionSubmitted;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -41,6 +42,20 @@ class Requisition extends Model
         'items' => 'array',
     ];
 
+    public function hasItems() {
+
+        return count($this->items) > 0;
+
+    }
+
+    public function isDraft() {
+        return $this->status === RequisitionStatus::DRAFT;
+    }
+
+    public function isSubmitted() {
+        return $this->status === RequisitionStatus::SUBMITTED;
+    }
+
 
     public function user(): BelongsTo
     {
@@ -67,11 +82,32 @@ class Requisition extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function submit() {
+
+        $this->submitted_at = now();
+        $this->status = RequisitionStatus::SUBMITTED;
+        $this->save();
+
+        $req = $this;
+        User::managers()->each(function($m) use ($req) {
+            $m->notify( new RequisitionSubmitted($req) );
+        });
+
+    }
+
     public function totalCost() {
         return number_format(
             (collect($this->items))
                 ->map(fn($item) => $item['quantity'] * $item['unit_price'])
                 ->sum(),
             2);
+    }
+
+    public function unsubmit() {
+        if($this->status === RequisitionStatus::SUBMITTED) {
+            $this->status = RequisitionStatus::DRAFT;
+            $this->submitted_at = null;
+            $this->save();
+        }
     }
 }

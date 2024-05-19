@@ -45,4 +45,8 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public static function managers() {
+        return static::role('manager')->get();
+    }
 }

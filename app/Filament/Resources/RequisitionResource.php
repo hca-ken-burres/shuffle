@@ -16,6 +16,7 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
@@ -23,6 +24,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 
@@ -158,14 +160,14 @@ class RequisitionResource extends Resource
                     ->label('Creator / Description')
                     ->numeric()
                     ->sortable()
-                    ->description(fn($record) => Str::of($record->reason)->limit(30)),
+                    ->description(fn($record) => Str::of($record->reason)->limit(20)),
                 Tables\Columns\TextColumn::make('category')
                     ->badge()
                     ->searchable()
                     ->color(fn($state) => $state->getColor()),
                 Tables\Columns\TextColumn::make('vendor.name')
-                    ->numeric()
-                    ->sortable(),
+                    ->sortable()
+                    ->limit(15),
                 // Tables\Columns\TextColumn::make('reason')
                 //     ->searchable()
                 //     ->hiddenOn(['index']),
@@ -194,6 +196,41 @@ class RequisitionResource extends Resource
             ->actions([
                 Tables\Actions\EditAction::make()
                     ->slideOver(),
+
+                Tables\Actions\Action::make('submit')
+                    ->icon('heroicon-o-paper-airplane')
+                    ->color('info')
+                    ->requiresConfirmation()
+                    ->visible(fn(Requisition $req) =>
+                        $req->isDraft() &&
+                        $req->hasItems()
+                    )->action(function(Requisition $req) {
+                        $req->submit();
+                    })->after(function() {
+                        Notification::make()->success()->title('Requisition Submitted')
+                            ->body('The requisition has been submitted and the appropriate individuals have been notified.')
+                            ->send();
+                    }),
+
+                Tables\Actions\Action::make('unsubmit')
+                    ->icon('heroicon-o-arrow-uturn-left')
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->visible(fn(Requisition $req) =>
+                        $req->isSubmitted()
+                    )->action(function(Requisition $req) {
+                        $req->unsubmit();
+                    }),
+
+                Tables\Actions\Action::make('approve')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->visible(fn(Requisition $req) => 
+                        $req->isSubmitted() && 
+                        Auth::user()->can('edit requisitions')
+                    ),
+
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
