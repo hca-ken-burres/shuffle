@@ -231,6 +231,20 @@ class RequisitionResource extends Resource
                         Auth::user()->can('edit requisitions')
                     ),
 
+                Tables\Actions\Action::make('delete')
+                    ->icon('heroicon-o-trash')
+                    ->color('danger')
+                    ->visible(fn(Requisition $req) =>
+                        $req->isDraft() &&
+                        Auth::user()->is($req->user)
+                    )->requiresConfirmation()
+                    ->action(function(Requisition $req) {
+                        $req->delete();
+                    })->after(function() {
+                        Notification::make()->success()->title('Requisition Deleted')
+                            ->body('The requisition has been deleted.')
+                            ->send();
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
