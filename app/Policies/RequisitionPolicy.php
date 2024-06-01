@@ -11,6 +11,7 @@ class RequisitionPolicy
     /**
      * Determine whether the user can view any models.
      */
+    // The index page will not work unless true is returned from this
     // public function viewAny(User $user): bool
     // {
     //     return $user->can('edit requisitions');
@@ -21,7 +22,8 @@ class RequisitionPolicy
      */
     public function view(User $user, Requisition $requisition): bool
     {
-        return $requisition->user()->is($user);
+        return $requisition->user()->is($user) ||
+            $user->can('edit requisitions');
     }
 
     /**
@@ -37,7 +39,9 @@ class RequisitionPolicy
      */
     public function update(User $user, Requisition $requisition): bool
     {
-        return $user->is($requisition->user) || $user->can('edit requisitions');
+        return $user->can('edit requisitions') || (
+            $user->is($requisition->user) && $requisition->isDraft()
+        );
     }
 
     /**
@@ -45,7 +49,10 @@ class RequisitionPolicy
      */
     public function delete(User $user, Requisition $requisition): bool
     {
-        return $user->is($requisition->user);
+        return $user->can('edit requisitions') || (   
+            $user->is($requisition->user)
+            && $requisition->isDraft()
+        );
     }
 
     /**

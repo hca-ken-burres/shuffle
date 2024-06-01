@@ -7,15 +7,21 @@ use App\Enums\RequisitionCategory;
 use App\Filament\Resources\RequisitionResource\Pages;
 use App\Filament\Resources\RequisitionResource\RelationManagers;
 use App\Filament\Resources\RequisitionResource\RelationManagers\RequisitionItemsRelationManager;
+use App\Infolists\Components\LinkEntry;
 use App\Models\Requisition;
 use App\Models\User;
 use App\Models\Year;
+use Filament\Actions\ViewAction;
 use Filament\Forms;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
+use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\Section as ComponentsSection;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Infolist;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -194,57 +200,62 @@ class RequisitionResource extends Resource
                     ->preload(),
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
-                    ->slideOver(),
 
-                Tables\Actions\Action::make('submit')
-                    ->icon('heroicon-o-paper-airplane')
-                    ->color('info')
-                    ->requiresConfirmation()
-                    ->visible(fn(Requisition $req) =>
-                        $req->isDraft() &&
-                        $req->hasItems()
-                    )->action(function(Requisition $req) {
-                        $req->submit();
-                    })->after(function() {
-                        Notification::make()->success()->title('Requisition Submitted')
-                            ->body('The requisition has been submitted and the appropriate individuals have been notified.')
-                            ->send();
-                    }),
+                Tables\Actions\ViewAction::make(),
 
-                Tables\Actions\Action::make('unsubmit')
-                    ->icon('heroicon-o-arrow-uturn-left')
-                    ->color('warning')
-                    ->requiresConfirmation()
-                    ->visible(fn(Requisition $req) =>
-                        $req->isSubmitted()
-                    )->action(function(Requisition $req) {
-                        $req->unsubmit();
-                    }),
+                Tables\Actions\ActionGroup::make([
 
-                Tables\Actions\Action::make('approve')
-                    ->icon('heroicon-o-check-circle')
-                    ->color('success')
-                    ->requiresConfirmation()
-                    ->visible(fn(Requisition $req) => 
-                        $req->isSubmitted() && 
-                        Auth::user()->can('edit requisitions')
-                    ),
+                    Tables\Actions\EditAction::make()
+                        ->slideOver(),
 
-                Tables\Actions\Action::make('delete')
-                    ->icon('heroicon-o-trash')
-                    ->color('danger')
-                    ->visible(fn(Requisition $req) =>
-                        $req->isDraft() &&
-                        Auth::user()->is($req->user)
-                    )->requiresConfirmation()
-                    ->action(function(Requisition $req) {
-                        $req->delete();
-                    })->after(function() {
-                        Notification::make()->success()->title('Requisition Deleted')
-                            ->body('The requisition has been deleted.')
-                            ->send();
-                    }),
+                    Tables\Actions\Action::make('submit')
+                        ->icon('heroicon-o-paper-airplane')
+                        ->color('info')
+                        ->requiresConfirmation()
+                        ->visible(fn(Requisition $req) =>
+                            $req->isDraft() &&
+                            $req->hasItems()
+                        )->action(function(Requisition $req) {
+                            $req->submit();
+                        })->after(function() {
+                            Notification::make()->success()->title('Requisition Submitted')
+                                ->body('The requisition has been submitted and the appropriate individuals have been notified.')
+                                ->send();
+                        }),
+
+                    Tables\Actions\Action::make('unsubmit')
+                        ->icon('heroicon-o-arrow-uturn-left')
+                        ->color('warning')
+                        ->requiresConfirmation()
+                        ->visible(fn(Requisition $req) =>
+                            $req->isSubmitted()
+                        )->action(function(Requisition $req) {
+                            $req->unsubmit();
+                        }),
+
+                    Tables\Actions\Action::make('approve')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->visible(fn(Requisition $req) => 
+                            $req->isSubmitted() && 
+                            Auth::user()->can('edit requisitions')
+                        ),
+
+                    Tables\Actions\Action::make('delete')
+                        ->icon('heroicon-o-trash')
+                        ->color('danger')
+                        ->visible(fn(Requisition $req) =>
+                            Auth::user()->can('delete', $req)
+                        )->requiresConfirmation()
+                        ->action(function(Requisition $req) {
+                            $req->delete();
+                        })->after(function() {
+                            Notification::make()->success()->title('Requisition Deleted')
+                                ->body('The requisition has been deleted.')
+                                ->send();
+                        }),
+                ])
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -252,6 +263,36 @@ class RequisitionResource extends Resource
                 ]),
             ]);
     }
+
+    public static function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist->schema([
+            ComponentsSection::make('General Information')
+                ->columns(4)
+                ->schema([
+                    TextEntry::make('User.name'),
+                    TextEntry::make('Year.name'),
+                    TextEntry::make('Category'),
+                    TextEntry::make('Vendor.name'),
+                    TextEntry::make('reason')
+                        ->columnSpan(4),
+                ]),
+            ComponentsSection::make('Items')
+                ->schema([
+                    RepeatableEntry::make('items')
+                        ->columns(4)
+                        ->schema([
+                            TextEntry::make('description')
+                                ->columnSpan(4),
+                            TextEntry::make('code'),
+                            LinkEntry::make('url'),
+                                // ->icon('heroicon-o-link'),
+                            TextEntry::make('quanitiy'),
+                            TextEntry::make('unit_price')
+                        ])
+                ])
+        ]);
+    }    
 
     public static function getRelations(): array
     {
@@ -265,6 +306,7 @@ class RequisitionResource extends Resource
         return [
             'index' => Pages\ListRequisitions::route('/'),
             'create' => Pages\CreateRequisition::route('/create'),
+            'view' => Pages\ViewRequisition::route('/{record}'),
             // 'edit' => Pages\EditRequisition::route('/{record}/edit'),
         ];
     }
